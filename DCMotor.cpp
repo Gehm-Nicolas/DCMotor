@@ -15,11 +15,11 @@ DCMotor::DCMotor(int id,int pin2, int pin1, int pinPWM,int pinSTBY, Encoder& enc
 
   this->id = id;
   this->direction = FORWARD;
-  this->encoder_position = 0;
-  this->angle = 0.00;
+  this->actual_encoder_pos = 0;
+  this->old_encoder_pos = 0;
 
   this->goal_speed = 0;
-  this->avg_speed = 100;
+  this->avg_speed = 0;
   this->acc_error=0;
 }
 
@@ -75,34 +75,26 @@ void DCMotor::start()
   digitalWrite(this->stby_pin,HIGH);
 }
 
-int DCMotor::speed_update()
+int DCMotor::speedUpdate()
 {
-  long actual_pos = 0;
-  long old_pos = 0;
-  int goal_speed = 0;
   int actual_speed = 0;
   int new_speed = 0;
   int error = 0;
 
-  /*goal_speed = this->goal_speed - VEL_OFFSET;
-  if(goal_speed > VEL_OFFSET){
-      this->goal_speed=0;
-      return new_speed;
-  }else{*/
-  actual_pos = this->_encoder.read();
-  old_pos = this->encoder_position;
-  actual_speed = actual_pos - old_pos;
-  this->encoder_position = actual_pos;
+  encoderPositionUpdate();
+  actual_speed = this->actual_encoder_pos - this->old_encoder_pos;
+
   this->avg_speed = 0.9*this->avg_speed + 0.1*actual_speed;
 
   error = this->goal_speed - actual_speed;
+
   this->acc_error += error;
   new_speed = 100*error + this->acc_error/8;
-  return new_speed;
+  return actual_speed;
   //}
 }
 
-int DCMotor::calc_PID(float desired, float actual)
+int DCMotor::calcPID(float desired, float actual)
 {
 /*  float max_acc;
   float max_pid;
@@ -136,6 +128,13 @@ void DCMotor::encoderWrite(long pos)
   _encoder.write(pos);
 }
 
+void DCMotor::encoderPositionUpdate()
+{
+  this->old_encoder_pos = this->actual_encoder_pos;
+  this->actual_encoder_pos = encoderRead();
+  delay(2);//In order to decrease update frequency
+}
+
 void DCMotor::receiveData(int goal_speed, int direction)
 {
   this->goal_speed = goal_speed;
@@ -155,6 +154,11 @@ int DCMotor::getDirection()
 int DCMotor::getAvgSpeed()
 {
   return this->avg_speed;
+}
+
+void DCMotor::setGoalSpeed(int new_speed)
+{
+  this->goal_speed = new_speed;
 }
 
 int DCMotor::getGoalSpeed()
