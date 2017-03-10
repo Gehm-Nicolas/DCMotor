@@ -24,6 +24,7 @@
 #define ENCODER_FULLBACK    44
 
 #include <Encoder.h>
+#include <math.h>
 
 class DCMotor {
 private:
@@ -36,6 +37,7 @@ private:
 
   int id;//"RIGHT_MOTOR" or "LEFT_MOTOR"
   int direction;//FORWARD or REVERSE
+
   long actual_encoder_pos;
   long old_encoder_pos;
 
@@ -50,11 +52,16 @@ private:
 public:
   DCMotor(int id,int pin2, int pin1, int pinPWM, int pinSTBY,Encoder& enc);
   void move(int speed, int direction);
+  void move(float meters, int direction);
+
   int speedToPwm(int speed);
+  void setPWM(int pwm_value);
+
   void stbyEnable();
   void stbyDisable();
 
-  int speedUpdate();
+  int speedLimitControl(int desired_speed);
+  void speedUpdate();
   int calcPID(float desired, float actual);
 
   long encoderRead();
