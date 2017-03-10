@@ -14,13 +14,25 @@ DCMotor::DCMotor(int id,int pin2, int pin1, int pinPWM,int pinSTBY, Encoder& enc
   this->stby_pin = pinSTBY;
 
   this->id = id;
-  this->direction = FORWARD;
+  this->direction = STOP;
   this->actual_encoder_pos = 0;
   this->old_encoder_pos = 0;
 
-  this->goal_speed = 0;
+  this->pwm_min = 64;
+  this->pwm_max = 255;
+
+  this->speed_offset = 2;
+  this->goal_speed = this->pwm_min;
   this->avg_speed = 0;
   this->acc_error=0;
+}
+
+int DCMotor::speedToPwm(int speed)
+{
+  /*SPEED   PWM
+      10    PWM_MAX
+      0     PWM_MIN*/
+  return (((this->pwm_max-this->pwm_min)/10)*speed + this->pwm_min);
 }
 
 void DCMotor::move(int speed, int direction)
@@ -31,6 +43,8 @@ void DCMotor::move(int speed, int direction)
   *   DIRECTION:  0 - reverse     *
   *               1 - forward    *
   *********************************/
+  int pwm_value = speedToPwm(speed);
+
   digitalWrite(this->stby_pin, HIGH);//disable standby
 
   if(this->id == LEFT_MOTOR){
@@ -60,16 +74,16 @@ void DCMotor::move(int speed, int direction)
       }
     }
   }
-  analogWrite(pwm_pin,speed);
+  analogWrite(pwm_pin,pwm_value);
 }
 
-void DCMotor::stop()
+void DCMotor::stbyEnable()
 {
   //Enable STANDBY
   digitalWrite(this->stby_pin,LOW);
 }
 
-void DCMotor::start()
+void DCMotor::stbyDisable()
 {
   //Disable STANDBY
   digitalWrite(this->stby_pin,HIGH);
@@ -78,20 +92,21 @@ void DCMotor::start()
 int DCMotor::speedUpdate()
 {
   int actual_speed = 0;
-  int new_speed = 0;
+  int new_pwm = 0;
   int error = 0;
 
   encoderPositionUpdate();
+  /*if(this->actual_encoder_pos%WHEEL_FULLBACK <= 10){
+    //1 Full back
+  }*/
   actual_speed = this->actual_encoder_pos - this->old_encoder_pos;
 
   this->avg_speed = 0.9*this->avg_speed + 0.1*actual_speed;
 
   error = this->goal_speed - actual_speed;
-
   this->acc_error += error;
-  new_speed = 100*error + this->acc_error/8;
-  return actual_speed;
-  //}
+  new_pwm = 100*error + this->acc_error/8;
+  return this->avg_speed;
 }
 
 int DCMotor::calcPID(float desired, float actual)
@@ -132,7 +147,27 @@ void DCMotor::encoderPositionUpdate()
 {
   this->old_encoder_pos = this->actual_encoder_pos;
   this->actual_encoder_pos = encoderRead();
-  delay(2);//In order to decrease update frequency
+  delay(3);//In order to decrease update frequency
+}
+
+int DCMotor::getPwmMin()
+{
+  return this->pwm_min;
+}
+
+void DCMotor::setPwmMin(int new_pwm_min)
+{
+  this->pwm_min = new_pwm_min;
+}
+
+int DCMotor::getPwmMax()
+{
+  return this->pwm_max;
+}
+
+void DCMotor::setPwmMax(int new_pwm_max)
+{
+  this->pwm_max = new_pwm_max;
 }
 
 void DCMotor::receiveData(int goal_speed, int direction)
