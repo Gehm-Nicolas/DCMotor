@@ -15,58 +15,62 @@ DCMotor::DCMotor(int id,int pin2, int pin1, int pinPWM,int pinSTBY, Encoder& enc
 
   this->id = id;
   this->direction = STOP;
-  this->actual_encoder_pos = 0;
-  this->old_encoder_pos = 0;
-
-  this->pwm_min = 64;
+  this->pwm_min = 0;
   this->pwm_max = 255;
 
-  this->speed_offset = 3;
-  this->goal_speed = 0; //0 to 10
-  this->avg_speed = 0;  //0 to 10
+  this->speed_offset = 0;
+  this->goal_speed = 0;
+  this->avg_speed = 0;
+
   this->acc_error = 0;
+  this->actual_encoder_pos = 0;
+  this->old_encoder_pos = 0;
 }
 
-int DCMotor::speedToPwm(int speed)
+void DCMotor::receiveData(int goal_speed, int direction)
 {
-  /*SPEED   PWM
-      10    PWM_MAX
-      0     PWM_MIN*/
-  if(speed>10){
-    speed = 10;
+  this->direction = direction;
+
+  if(goal_speed>10){
+    this->goal_speed = 10;
   }else{
-    if(speed<0){
-      speed = 0;
+    if(goal_speed<0){
+      this->goal_speed = 0;
+    }else{
+      this->goal_speed = goal_speed;
     }
   }
-  return (((this->pwm_max-this->pwm_min)/10)*speed + this->pwm_min);
 }
 
+int DCMotor::speedToPwm(int speed){
+  //return (((this->pwm_max-this->pwm_min)/10)*speed + this->pwm_min);
+  return (((this->pwm_max-this->pwm_min)/MAX_SPEED)*speed + this->pwm_min);
+}
 void DCMotor::move(float meters, int direction)
 {
-  /*if(motor_L.encoderRead() % WHEEL_FULLBACK <= 10){
+  /*if(motor_L.getEncoder() % WHEEL_FULLBACK <= 10){
       //A complete WHEEL_FULLBACK;
   }*/
 }
-
-void DCMotor::move(int speed, int direction)
+void DCMotor::move()
 {
   /********************************
-  *   SPEED:      0 - 64          *
-  *              10 - full speed  *
-  *   DIRECTION:  0 - reverse     *
-  *               1 - forward     *
+  *   DIRECTION:  0  - reverse    *
+  *               1  - forward    *
   *********************************/
-  int pwm_value = speedToPwm(speed);
+
+  //int pwm_value = speedToPwm(this->goal_speed);
+  int pwm_value = speedToPwm(this->goal_speed) + speedUpdate();
+
 
   digitalWrite(this->stby_pin, HIGH);//disable standby
 
   if(this->id == LEFT_MOTOR){
-    if(direction == STOP){
+    if(this->direction == STOP){
       digitalWrite(in1_pin,LOW);
       digitalWrite(in2_pin,LOW);
     }else{
-      if(direction == FORWARD){
+      if(this->direction == FORWARD){
         digitalWrite(in1_pin,HIGH);
         digitalWrite(in2_pin,LOW);
       }else{
@@ -75,11 +79,11 @@ void DCMotor::move(int speed, int direction)
       }
     }
   }else{//RIGHT_MOTOR
-    if(direction == STOP){
+    if(this->direction == STOP){
       digitalWrite(in1_pin,LOW);
       digitalWrite(in2_pin,LOW);
     }else{
-      if(direction == FORWARD){
+      if(this->direction == FORWARD){
         digitalWrite(in1_pin,LOW);
         digitalWrite(in2_pin,HIGH);
       }else{
@@ -91,49 +95,24 @@ void DCMotor::move(int speed, int direction)
   analogWrite(this->pwm_pin,pwm_value);
 }
 
-void DCMotor::stbyEnable()
-{
-  //Enable STANDBY
-  digitalWrite(this->stby_pin,LOW);
-}
-
-void DCMotor::stbyDisable()
-{
-  //Disable STANDBY
-  digitalWrite(this->stby_pin,HIGH);
-}
-
-int DCMotor::speedLimitControl(int desired_speed)
-{
-  if(desired_speed < 0){
-    return 0;
-  }else{
-    if(desired_speed > 10){
-      return 10;
-    }else{
-      return desired_speed;
-    }
-  }
-}
-
-void DCMotor::speedUpdate()
+int DCMotor::speedUpdate()
 {
   int actual_speed = 0;
-  int new_pwm = 0;
+  unsigned int pwm_correction = 0;
   int error = 0;
 
   encoderPositionUpdate();
   /*if(this->actual_encoder_pos%WHEEL_FULLBACK <= 10){
     //1 Full back
   }*/
-  actual_speed = this->actual_encoder_pos - this->old_encoder_pos - this->speed_offset;
-
+  actual_speed = this->actual_encoder_pos - this->old_encoder_pos + speed_offset;
   this->avg_speed = 0.9*this->avg_speed + 0.1*actual_speed;
 
-  error = this->goal_speed - actual_speed;
+  error = this->goal_speed - abs(actual_speed);
+
   this->acc_error += error;
-  new_pwm = 100*error + this->acc_error/8;
-  digitalWrite(this->pwm_pin,new_pwm);
+  pwm_correction = 25*error/this->goal_speed + this->acc_error/8;
+  return pwm_correction;
 }
 
 int DCMotor::calcPID(float desired, float actual)
@@ -159,57 +138,11 @@ int DCMotor::calcPID(float desired, float actual)
   return constrain(pid,-max_pid,max_pid);*/
 }
 
-long DCMotor::encoderRead()
-{
-  //I believe that 44 is equivalent a full back (360º)
-  return _encoder.read();
-}
-
-void DCMotor::encoderWrite(long pos)
-{
-  _encoder.write(pos);
-}
-
 void DCMotor::encoderPositionUpdate()
 {
   this->old_encoder_pos = this->actual_encoder_pos;
-  this->actual_encoder_pos = encoderRead();
+  this->actual_encoder_pos = getEncoder();
   delay(2);//In order to decrease update frequency
-}
-
-int DCMotor::getPwmMin()
-{
-  return this->pwm_min;
-}
-
-void DCMotor::setPwmMin(int new_pwm_min)
-{
-  this->pwm_min = new_pwm_min;
-}
-
-int DCMotor::getPwmMax()
-{
-  return this->pwm_max;
-}
-
-void DCMotor::setPwmMax(int new_pwm_max)
-{
-  this->pwm_max = new_pwm_max;
-}
-
-void DCMotor::receiveData(int goal_speed, int direction)
-{
-  this->direction = direction;
-
-  if(goal_speed>10){
-    this->goal_speed = 10;
-  }else{
-    if(goal_speed<0){
-      this->goal_speed = 0;
-    }else{
-      this->goal_speed = goal_speed;
-    }
-  }
 }
 
 void DCMotor::sendData()
@@ -217,22 +150,20 @@ void DCMotor::sendData()
   //TODO
 }
 
-int DCMotor::getDirection()
-{
-  return this->direction;
-}
-
-int DCMotor::getAvgSpeed()
-{
-  return this->avg_speed;
-}
-
-void DCMotor::setGoalSpeed(int new_speed)
-{
-  this->goal_speed = new_speed;
-}
-
-int DCMotor::getGoalSpeed()
-{
-  return this->goal_speed;
-}
+void DCMotor::stbyEnable()                          {digitalWrite(this->stby_pin,LOW);}
+void DCMotor::stbyDisable()                         {digitalWrite(this->stby_pin,HIGH);}
+long DCMotor::getEncoder()                          {return _encoder.read();}//I believe that 44 is equivalent a full back (360º)
+void DCMotor::setEncoder(long pos)                  {_encoder.write(pos);}
+int DCMotor::getID()                                {return this->id;}
+void DCMotor::setID(int new_ID)                     {this->id = new_ID;}
+int DCMotor::getDirection()                         {return this->direction;}
+void DCMotor::setDirection(int new_direction)       {this->direction = new_direction;}
+int DCMotor::getPwmMin()                            {return this->pwm_min;}
+void DCMotor::setPwmMin(int new_pwm_min)            {this->pwm_min = new_pwm_min;}
+int DCMotor::getPwmMax()                            {return this->pwm_max;}
+void DCMotor::setPwmMax(int new_pwm_max)            {this->pwm_max = new_pwm_max;}
+int DCMotor::getSpeedOffset()                       {return this->speed_offset;}
+void DCMotor::setSpeedOffset(int new_speed_offset)  {this->speed_offset = new_speed_offset;}
+int DCMotor::getGoalSpeed()                         {return this->goal_speed;}
+void DCMotor::setGoalSpeed(int new_speed)           {this->goal_speed = new_speed;}
+int DCMotor::getAvgSpeed()                          {return this->avg_speed;}
