@@ -67,6 +67,7 @@ void DCMotor::move()
 
   if(this->id == LEFT_MOTOR){
     if(this->direction == STOP){
+      stbyEnable();
       digitalWrite(in1_pin,LOW);
       digitalWrite(in2_pin,LOW);
     }else{
@@ -80,6 +81,7 @@ void DCMotor::move()
     }
   }else{//RIGHT_MOTOR
     if(this->direction == STOP){
+      stbyEnable();
       digitalWrite(in1_pin,LOW);
       digitalWrite(in2_pin,LOW);
     }else{

@@ -41,6 +41,8 @@ private:
   int goal_speed;
   float avg_speed;
 
+  long goal_position;
+
   int acc_error;
   long actual_encoder_pos;
   long old_encoder_pos;
@@ -75,6 +77,8 @@ public:
   int getGoalSpeed();
   void setGoalSpeed(int new_speed);
   int getAvgSpeed();
+   //TODO:void setGoalPosition(long new_goal_position);
+  //TODO:long getGoalPosition();
 };
 
 #endif
