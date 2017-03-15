@@ -72,11 +72,11 @@ void DCMotor::move()
       digitalWrite(in2_pin,LOW);
     }else{
       if(this->direction == FORWARD){
-        digitalWrite(in1_pin,HIGH);
-        digitalWrite(in2_pin,LOW);
-      }else{
         digitalWrite(in1_pin,LOW);
         digitalWrite(in2_pin,HIGH);
+      }else{
+        digitalWrite(in1_pin,HIGH);
+        digitalWrite(in2_pin,LOW);
       }
     }
   }else{//RIGHT_MOTOR
@@ -86,11 +86,11 @@ void DCMotor::move()
       digitalWrite(in2_pin,LOW);
     }else{
       if(this->direction == FORWARD){
-        digitalWrite(in1_pin,HIGH);
-        digitalWrite(in2_pin,LOW);
-      }else{
         digitalWrite(in1_pin,LOW);
         digitalWrite(in2_pin,HIGH);
+      }else{
+        digitalWrite(in1_pin,HIGH);
+        digitalWrite(in2_pin,LOW);
       }
     }
   }
