@@ -15,52 +15,51 @@ DCMotor::DCMotor(int id,int pin2, int pin1, int pinPWM,int pinSTBY, Encoder& enc
 
   this->id = id;
   this->direction = STOP;
-  this->pwm_min = 0;
+  this->pwm_min = 20;
   this->pwm_max = 255;
 
   this->speed_offset = 0;
   this->goal_speed = 0;
   this->avg_speed = 0;
 
+  this->goal_position = 0;
+
   this->acc_error = 0;
-  this->actual_encoder_pos = 0;
+  this->current_encoder_pos = 0;
   this->old_encoder_pos = 0;
 }
 
-void DCMotor::receiveData(int goal_speed, int direction)
+void DCMotor::receiveData(int memAddress, int data)
 {
-  this->direction = direction;
-
-  if(goal_speed>10){
-    this->goal_speed = 10;
-  }else{
-    if(goal_speed<0){
-      this->goal_speed = 0;
-    }else{
-      this->goal_speed = goal_speed;
-    }
-  }
 }
 
 int DCMotor::speedToPwm(int speed){
   //return (((this->pwm_max-this->pwm_min)/10)*speed + this->pwm_min);
   return (((this->pwm_max-this->pwm_min)/MAX_SPEED)*speed + this->pwm_min);
 }
-void DCMotor::move(float meters, int direction)
+
+/*void DCMotor::move(int distance)//distance in milimeters
 {
+
+  this->goal_position = new_goal_position;
   /*if(motor_L.getEncoder() % WHEEL_FULLBACK <= 10){
       //A complete WHEEL_FULLBACK;
-  }*/
-}
+  }
+  if(getEncoder() >= this->goal_position){
+    this->direction = STOP;
+  }
+}*/
+
 void DCMotor::move()
 {
   /********************************
-  *   DIRECTION:  0  - reverse    *
-  *               1  - forward    *
+  *   DIRECTION:  0  - REVERSE    *
+  *               1  - FORWARD    *
+  *               2  - STOP       *
   *********************************/
 
-  //int pwm_value = speedToPwm(this->goal_speed);
-  int pwm_value = speedToPwm(this->goal_speed) + speedUpdate();
+  int pwm_value = speedToPwm(this->goal_speed);
+  //int pwm_value = speedToPwm(this->goal_speed) + speedUpdate();
 
 
   digitalWrite(this->stby_pin, HIGH);//disable standby
@@ -99,25 +98,22 @@ void DCMotor::move()
 
 int DCMotor::speedUpdate()
 {
-  int actual_speed = 0;
+  int current_speed = 0;
   unsigned int pwm_correction = 0;
   int error = 0;
 
   encoderPositionUpdate();
-  /*if(this->actual_encoder_pos%WHEEL_FULLBACK <= 10){
-    //1 Full back
-  }*/
-  actual_speed = this->actual_encoder_pos - this->old_encoder_pos + speed_offset;
-  this->avg_speed = 0.9*this->avg_speed + 0.1*actual_speed;
+  current_speed = this->current_encoder_pos - this->old_encoder_pos + speed_offset;
+  this->avg_speed = 0.9*this->avg_speed + 0.1*current_speed;
 
-  error = this->goal_speed - abs(actual_speed);
+  error = this->goal_speed - abs(current_speed);
 
   this->acc_error += error;
   pwm_correction = 25*error/this->goal_speed + this->acc_error/8;
   return pwm_correction;
 }
 
-int DCMotor::calcPID(float desired, float actual)
+int DCMotor::calcPID(float desired, float current)
 {
 /*  float max_acc;
   float max_pid;
@@ -126,7 +122,7 @@ int DCMotor::calcPID(float desired, float actual)
   float p;
   float i;
   float d;
-  float error = desired - actual;
+  float error = desired - current;
 
   acc += error;
 
@@ -142,8 +138,8 @@ int DCMotor::calcPID(float desired, float actual)
 
 void DCMotor::encoderPositionUpdate()
 {
-  this->old_encoder_pos = this->actual_encoder_pos;
-  this->actual_encoder_pos = getEncoder();
+  this->old_encoder_pos = this->current_encoder_pos;
+  this->current_encoder_pos = getEncoder();
   delay(2);//In order to decrease update frequency
 }
 

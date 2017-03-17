@@ -42,20 +42,21 @@ private:
   float avg_speed;
 
   long goal_position;
+  long start_position;
 
   int acc_error;
-  long actual_encoder_pos;
+  long current_encoder_pos;
   long old_encoder_pos;
 
 public:
   DCMotor(int id,int pin2, int pin1, int pinPWM, int pinSTBY,Encoder& enc);
 
-  void receiveData(int goal_speed, int direction);
+  void receiveData(int memAddress , int data);
   int speedToPwm(int speed);
   void move(float meters, int direction);
   void move();
   int speedUpdate();
-  int calcPID(float desired, float actual);
+  int calcPID(float desired, float current);
 private:
   void encoderPositionUpdate();
 public:
