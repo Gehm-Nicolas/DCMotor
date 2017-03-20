@@ -6,9 +6,9 @@
 /*DC_MOTOR
   Reduction:  1:75 (1:74.83)*/
 
-#define STOP    2
-#define FORWARD 1
-#define REVERSE 0
+#define STOP        2 //WHEEL_MODE
+#define FORWARD     1 //WHEEL_MODE
+#define REVERSE     0 //WHEEL_MODE
 #define RIGHT_MOTOR   10
 #define LEFT_MOTOR    11
 
@@ -45,7 +45,7 @@ private:
   long start_position;
 
   int acc_error;
-  long current_encoder_pos;
+  long present_encoder_pos;
   long old_encoder_pos;
 
 public:
@@ -56,7 +56,7 @@ public:
   void move(float meters, int direction);
   void move();
   int speedUpdate();
-  int calcPID(float desired, float current);
+  int calcPID(float desired, float present);
 private:
   void encoderPositionUpdate();
 public:

@@ -25,7 +25,7 @@ DCMotor::DCMotor(int id,int pin2, int pin1, int pinPWM,int pinSTBY, Encoder& enc
   this->goal_position = 0;
 
   this->acc_error = 0;
-  this->current_encoder_pos = 0;
+  this->present_encoder_pos = 0;
   this->old_encoder_pos = 0;
 }
 
@@ -98,22 +98,23 @@ void DCMotor::move()
 
 int DCMotor::speedUpdate()
 {
-  int current_speed = 0;
+  int present_speed = 0;
   unsigned int pwm_correction = 0;
   int error = 0;
 
   encoderPositionUpdate();
-  current_speed = this->current_encoder_pos - this->old_encoder_pos + speed_offset;
-  this->avg_speed = 0.9*this->avg_speed + 0.1*current_speed;
+  present_speed = this->present_encoder_pos - this->old_encoder_pos + speed_offset;
+  this->avg_speed = 0.9*this->avg_speed + 0.1*present_speed;
 
-  error = this->goal_speed - abs(current_speed);
+  //error = this->goal_speed - abs(present_speed);
+  error = this->avg_speed - abs(present_speed);
 
   this->acc_error += error;
   pwm_correction = 25*error/this->goal_speed + this->acc_error/8;
   return pwm_correction;
 }
 
-int DCMotor::calcPID(float desired, float current)
+int DCMotor::calcPID(float desired, float present)
 {
 /*  float max_acc;
   float max_pid;
@@ -122,7 +123,7 @@ int DCMotor::calcPID(float desired, float current)
   float p;
   float i;
   float d;
-  float error = desired - current;
+  float error = desired - present;
 
   acc += error;
 
@@ -138,8 +139,8 @@ int DCMotor::calcPID(float desired, float current)
 
 void DCMotor::encoderPositionUpdate()
 {
-  this->old_encoder_pos = this->current_encoder_pos;
-  this->current_encoder_pos = getEncoder();
+  this->old_encoder_pos = this->present_encoder_pos;
+  this->present_encoder_pos = getEncoder();
   delay(2);//In order to decrease update frequency
 }
 
