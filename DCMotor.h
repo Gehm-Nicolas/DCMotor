@@ -19,6 +19,7 @@
 #define WHEEL_CIRCUMFERENCE 314 //mm
 #define WHEEL_FULLBACK      3292
 #define ENCODER_FULLBACK    44
+#define WM_PROP             10484 // WHEEL_FULLBACK(pulses)*1000(mm)/ WHEEL_CIRCUMFERENCE(mm)
 
 #include <Encoder.h>
 #include <math.h>
@@ -41,45 +42,61 @@ private:
   int goal_speed;
   float avg_speed;
 
-  long goal_position;
-  long start_position;
-
+  float goal_position;//-1(WHEEL_MODE)
+                      //!=-1(JOINT_MODE)
+                      //value in "meters"
   int acc_error;
+
+  long start_encoder_pos;
   long present_encoder_pos;
   long old_encoder_pos;
-
 public:
   DCMotor(int id,int pin2, int pin1, int pinPWM, int pinSTBY,Encoder& enc);
 
-  void receiveData(int memAddress , int data);
-  int speedToPwm(int speed);
-  void move(float meters, int direction);
-  void move();
   int speedUpdate();
+  int speedToPwm(int speed);
+  int softSpeedToPwm();
+  int pwmControl();
+
+  void move();
+
   int calcPID(float desired, float present);
+
 private:
   void encoderPositionUpdate();
+
 public:
+  void receiveData(int memAddress , int data);
   void sendData();
+
   void stbyEnable();
   void stbyDisable();
+
   long getEncoder();
   void setEncoder(long pos);
+
   int getID();
   void setID(int new_ID);
+
   int getDirection();
   void setDirection(int new_direction);
+
   int getPwmMin();
   void setPwmMin(int new_pwm_min);
+
   int getPwmMax();
   void setPwmMax(int new_pwm_max);
+
   int getSpeedOffset();
   void setSpeedOffset(int new_speed_offset);
+
   int getGoalSpeed();
   void setGoalSpeed(int new_speed);
+
+  void setGoalPosition(float new_goal_position);
+  float getGoalPosition();//return value in "meters"
+
   int getAvgSpeed();
-   //TODO:void setGoalPosition(long new_goal_position);
-  //TODO:long getGoalPosition();
 };
 
 #endif
