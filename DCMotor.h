@@ -6,20 +6,25 @@
 /*DC_MOTOR
   Reduction:  1:75 (1:74.83)*/
 
+#define LEFT_MOTOR  9
+#define RIGHT_MOTOR 10
+
+#define MAX_SPEED     10  //PWM = 250
+#define MIN_SPEED     0   //PWM = 0
+
+#define MAX_PWM     255
+#define MIN_PWM     0
+
 #define STOP        2 //WHEEL_MODE
 #define FORWARD     1 //WHEEL_MODE
 #define REVERSE     0 //WHEEL_MODE
-#define RIGHT_MOTOR   10
-#define LEFT_MOTOR    11
-
-#define MAX_SPEED     10
-#define MIN_SPEED     0
 
 #define WHEEL_DIAMETER      100 //mm
 #define WHEEL_CIRCUMFERENCE 314 //mm
 #define WHEEL_FULLBACK      3292
 #define ENCODER_FULLBACK    44
-#define WM_PROP             10484 // WHEEL_FULLBACK(pulses)*1000(mm)/ WHEEL_CIRCUMFERENCE(mm)
+
+#define ENCODER_UPDATE_TIME 50 //ms
 
 #include <Encoder.h>
 #include <math.h>
@@ -34,40 +39,32 @@ private:
   int stby_pin;
 
   int id;         //"RIGHT_MOTOR" or "LEFT_MOTOR"
-  int direction;  //FORWARD or REVERSE
-  int pwm_min;    //Minimum DC value to move motor
-  int pwm_max;
+  int direction;  //FORWARD,REVERSE or PAUSE
 
-  int speed_offset;
-  int goal_speed;
-  float avg_speed;
+  int goal_speed; //0 to 10
+  int avg_speed;
 
-  float goal_position;//-1(WHEEL_MODE)
+  int present_encoder_pos;
+  int last_encoder_pos;
+
+  int goal_position;//-1(WHEEL_MODE)
                       //!=-1(JOINT_MODE)
-                      //value in "meters"
-  int acc_error;
+                      //value in "milimeters"
 
-  long start_encoder_pos;
-  long present_encoder_pos;
-  long old_encoder_pos;
 public:
   DCMotor(int id,int pin2, int pin1, int pinPWM, int pinSTBY,Encoder& enc);
 
-  int speedUpdate();
-  int speedToPwm(int speed);
-  int softSpeedToPwm();
-  int pwmControl();
-
-  void move();
-
-  int calcPID(float desired, float present);
-
-private:
-  void encoderPositionUpdate();
-
-public:
   void receiveData(int memAddress , int data);
   void sendData();
+
+  void move(int pwm_value);
+
+  int speedToPwm();
+
+  int update();
+  void encoderUpdate();
+  int speedUpdate();
+  int updatePID(float desired, float present);
 
   void stbyEnable();
   void stbyDisable();
@@ -93,8 +90,8 @@ public:
   int getGoalSpeed();
   void setGoalSpeed(int new_speed);
 
+  float getGoalPosition();//return value in "milimeters"
   void setGoalPosition(float new_goal_position);
-  float getGoalPosition();//return value in "meters"
 
   int getAvgSpeed();
 };
