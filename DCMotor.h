@@ -46,10 +46,11 @@ private:
 
   int present_encoder_pos;
   int last_encoder_pos;
+  float start_encoder_pos;
 
-  int goal_position;//-1(WHEEL_MODE)
+  float goal_position;//-1(WHEEL_MODE)
                       //!=-1(JOINT_MODE)
-                      //value in "milimeters"
+                      //value in "Centimeters"
 
 public:
   DCMotor(int id,int pin2, int pin1, int pinPWM, int pinSTBY,Encoder& enc);
@@ -57,18 +58,24 @@ public:
   void receiveData(int memAddress , int data);
   void sendData();
 
+  int update();
+private:
   void move(int pwm_value);
 
   int speedToPwm();
 
-  int update();
   void encoderUpdate();
+
   int speedUpdate();
-  int updatePID(float desired, float present);
+
+  long positionUpdate();
+
+  int softSpeedUpdate();
 
   void stbyEnable();
   void stbyDisable();
 
+public:
   long getEncoder();
   void setEncoder(long pos);
 
@@ -90,7 +97,7 @@ public:
   int getGoalSpeed();
   void setGoalSpeed(int new_speed);
 
-  float getGoalPosition();//return value in "milimeters"
+  float getGoalPosition();//return value in "Centimeters"
   void setGoalPosition(float new_goal_position);
 
   int getAvgSpeed();

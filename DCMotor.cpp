@@ -20,7 +20,8 @@ DCMotor::DCMotor(int id,int pin2, int pin1, int pinPWM,int pinSTBY, Encoder& enc
   this->avg_speed = 0;
 
   this->present_encoder_pos = 0;
-  this->last_encoder_pos = 0;
+  this->last_encoder_pos    = 0;
+  this->start_encoder_pos   = 0;
 
   this->goal_position = -1;
 }
@@ -33,6 +34,26 @@ void DCMotor::sendData()
 {
   //TODO
 }
+
+int DCMotor::update()
+{
+  /*Main and only function to control the motor*/
+  static unsigned long lastMilli = 0;//loop timer
+
+  if((millis() - lastMilli) >= ENCODER_UPDATE_TIME)
+  {
+    int new_pwm = 0;
+    int encoder_dif = 0;
+
+    lastMilli = millis();
+    encoderUpdate();
+    encoder_dif = (int)positionUpdate();//encoder_difference to achieve goal
+    new_pwm = speedUpdate();
+    move(new_pwm);
+    return encoder_dif;
+  }
+}
+
 
 void DCMotor::move(int pwm_value)
 {
@@ -77,23 +98,6 @@ void DCMotor::move(int pwm_value)
   analogWrite(this->pwm_pin,pwm_value);
 }
 
-int DCMotor::update()
-{
-  static unsigned long lastMilli = 0;//loop timer
-
-  int data = 0;
-  int new_pwm = 0;
-
-  if((millis() - lastMilli) >= ENCODER_UPDATE_TIME)
-  {
-    lastMilli = millis();
-    encoderUpdate();
-    new_pwm = speedUpdate();
-    move(new_pwm);
-    return new_pwm;
-  }
-}
-
 int DCMotor::speedToPwm()
 {
   /*SPEED:0   1   2   3   4   5   6   7   8   9   10
@@ -112,7 +116,7 @@ int DCMotor::speedUpdate()
 {
   /*PWM correction using PID*/
   static int error_acc = 0;
-  //static int last_error = 0;
+  static int last_error = 0;
 
   int present_encoder_speed = 0;
   int goal_encoder_speed = 0;
@@ -122,7 +126,7 @@ int DCMotor::speedUpdate()
 
   float Kp = 2;
   float Ki = 1/8;
-  //float Kd = 0;
+  float Kd = 0;
 
   present_encoder_speed = abs(this->present_encoder_pos - this->last_encoder_pos);
   goal_encoder_speed = 25*this->goal_speed;
@@ -132,56 +136,73 @@ int DCMotor::speedUpdate()
   error = goal_encoder_speed - present_encoder_speed;
   error_acc += error;
 
-  //pwm_correction = Kp*error + Ki*error_acc + Kd*(last_error - error);
-  pwm_correction = Kp*error + Ki*error_acc;
+  pwm_correction = Kp*error + Ki*error_acc + Kd*(last_error - error);
   new_pwm = speedToPwm() + pwm_correction;
 
-  //last_error = error;
+  last_error = error;
 
   return constrain(new_pwm,MIN_PWM,MAX_PWM);
 }
 
-
-/*int DCMotor::speedUpdate()
+long DCMotor::positionUpdate()
 {
+  /*Only runs when there is a goal_position (Centimeters).
+    goal_position converted to MM multiplying by 10
+    This code doesn't take into account the inertia*/
+  if(this->goal_position != -1)
+  {
+      if(this->start_encoder_pos == 0)
+      {
+        this->start_encoder_pos = abs(getEncoder());
+      }
+      float goal_encoder_distance = 10*this->goal_position * (WHEEL_FULLBACK/WHEEL_CIRCUMFERENCE);
+      float goal_encoder_pos = this->start_encoder_pos + goal_encoder_distance;
 
-  present_speed = this->present_encoder_pos - this->old_encoder_pos;
-  this->avg_speed = 0.9*this->avg_speed + 0.1*present_speed;
+      float encoder_dif = goal_encoder_pos - abs((float)getEncoder());
 
-  //error = abs(this->goal_speed - present_speed);
-  error =  abs(this->avg_speed - present_speed);
+      if(encoder_dif <= 0.0)
+      {
+        setDirection(STOP);
+        setGoalSpeed(0);
+        setGoalPosition(-1);
+        this->start_encoder_pos = 0.0;
+      }
 
-  this->acc_error += error;
-  pwm_correction = 100*error/this->goal_speed + this->acc_error/8;
-  return present_speed;
-}*/
-
-
-
-
-
-int DCMotor::updatePID(float desired, float present)
-{
-/*int maxACC;
-  int maxPID = this->pwm_max;
-  inr minPID = this->pwm_min;
-  int acc = 0;
-  int err = 0;
-  float p = 100;
-  float i = 1/8;
-  float d = ;
-  float error = desired - present;
-
-  acc += error;
-
-  int p_term = p * error;
-  int i_term = i * constrain(acc,-max_acc,max_acc);
-  int d_term = d * (error - err);
-
-  int pid = p_term + i_term + d_term;
-  return constrain(pid,this->pwm_min,this->pwm_max);*/
+      return encoder_dif;
+  }
+  return 0;
 }
 
+int DCMotor::softSpeedUpdate()
+{
+  /*float SPEED_UP_SLOPE = 0.25;
+  float speedControl = 1;
+  int pwm_value = 0;
+
+  if(this->goal_position != -1)
+  {
+    //traveled distance control
+    int traveledDistance = WHEEL_CIRCUMFERENCE * abs(this->present_encoder_pos - this->start_encoder_pos)/WHEEL_FULLBACK;//distance in mm
+    float progress = this->goal_position / traveledDistance;
+
+    if((progress<SPEED_UP_SLOPE) || ((1-progress)<SPEED_UP_SLOPE))
+    {
+      speedControl = progress / SPEED_UP_SLOPE;
+    }else{
+      if(progress > 0.95)
+      {
+        setGoalSpeed(0);
+        setDirection(STOP);
+        setGoalPosition(-1);
+        this->start_encoder_pos = 0;
+      }else{
+          speedControl = 1;
+      }
+    }
+  }
+  pwm_value = round(speedControl * speedToPwm());
+  return pwm_value;*/
+}
 
 void DCMotor::stbyEnable()                            {digitalWrite(this->stby_pin,LOW);}
 void DCMotor::stbyDisable()                           {digitalWrite(this->stby_pin,HIGH);}
