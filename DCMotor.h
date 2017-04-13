@@ -24,7 +24,7 @@
 #define WHEEL_FULLBACK      3292
 #define ENCODER_FULLBACK    44
 
-#define ENCODER_UPDATE_TIME 50 //ms
+#define ENCODER_UPDATE_TIME 2 //ms
 
 #include <Encoder.h>
 #include <math.h>
@@ -39,7 +39,7 @@ private:
   int stby_pin;
 
   int id;         //"RIGHT_MOTOR" or "LEFT_MOTOR"
-  int direction;  //FORWARD,REVERSE or PAUSE
+  int direction;  //FORWARD,REVERSE or STOP
 
   int goal_speed; //0 to 10
   int avg_speed;
@@ -57,21 +57,13 @@ public:
 
   void receiveData(int memAddress , int data);
   void sendData();
-
   int update();
-private:
+//private:
   void move(int pwm_value);
-
   int speedToPwm();
-
   void encoderUpdate();
-
   int speedUpdate();
-
   long positionUpdate();
-
-  int softSpeedUpdate();
-
   void stbyEnable();
   void stbyDisable();
 
@@ -84,15 +76,6 @@ public:
 
   int getDirection();
   void setDirection(int new_direction);
-
-  int getPwmMin();
-  void setPwmMin(int new_pwm_min);
-
-  int getPwmMax();
-  void setPwmMax(int new_pwm_max);
-
-  int getSpeedOffset();
-  void setSpeedOffset(int new_speed_offset);
 
   int getGoalSpeed();
   void setGoalSpeed(int new_speed);
