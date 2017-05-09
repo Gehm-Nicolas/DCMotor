@@ -6,84 +6,55 @@
 /*DC_MOTOR
   Reduction:  1:75 (1:74.83)*/
 
-#define LEFT_MOTOR  9
-#define RIGHT_MOTOR 10
-
-#define MAX_SPEED     10  //PWM = 250
-#define MIN_SPEED     0   //PWM = 0
-
-#define MAX_PWM     255
-#define MIN_PWM     0
-
-#define STOP        2 //WHEEL_MODE
-#define FORWARD     1 //WHEEL_MODE
-#define REVERSE     0 //WHEEL_MODE
+#include <Encoder.h>
+#include <math.h>
 
 #define WHEEL_DIAMETER      100 //mm
 #define WHEEL_CIRCUMFERENCE 314 //mm
 #define WHEEL_FULLBACK      3292
 #define ENCODER_FULLBACK    44
 
-#define ENCODER_UPDATE_TIME 2 //ms
-
-#include <Encoder.h>
-#include <math.h>
+#define LEFT_MOTOR  9
+#define RIGHT_MOTOR 10
+#define MAX_SPEED   10
+#define MIN_SPEED  -10
+#define MAX_PWM     250 //Actually 255
+#define MIN_PWM     0  	//40(25+15)=In order to have strong enough to move the motor itslef and to move robot weight.
 
 class DCMotor {
-private:
+//private:
+public:
   Encoder& _encoder;
-
   int in1_pin;
   int in2_pin;
   int pwm_pin;
   int stby_pin;
 
-  int id;         //"RIGHT_MOTOR" or "LEFT_MOTOR"
-  int direction;  //FORWARD,REVERSE or STOP
+  int 	id;         //"RIGHT_MOTOR" or "LEFT_MOTOR"
+  int 	goal_speed; //-10 to 10
+  int 	avg_speed;  //0 to 10
+  int 	pwm_value;  //0 to 255
 
-  int goal_speed; //0 to 10
-  int avg_speed;
-
-  int present_encoder_pos;
-  int last_encoder_pos;
-  float start_encoder_pos;
-
-  float goal_position;//-1(WHEEL_MODE)
-                      //!=-1(JOINT_MODE)
-                      //value in "Centimeters"
+  unsigned long present_encoder_pos;
+  unsigned long last_encoder_pos;
+  long error;
+  long error_acc;
 
 public:
   DCMotor(int id,int pin2, int pin1, int pinPWM, int pinSTBY,Encoder& enc);
+  void 	encoderUpdate();
+  void 	speedUpdate();
+  void 	move();
+  void 	stbyEnable();
+  void 	stbyDisable();
 
-  void receiveData(int memAddress , int data);
-  void sendData();
-  int update();
-//private:
-  void move(int pwm_value);
-  int speedToPwm();
-  void encoderUpdate();
-  int speedUpdate();
-  long positionUpdate();
-  void stbyEnable();
-  void stbyDisable();
-
-public:
-  long getEncoder();
-  void setEncoder(long pos);
-
-  int getID();
-  void setID(int new_ID);
-
-  int getDirection();
-  void setDirection(int new_direction);
-
-  int getGoalSpeed();
-  void setGoalSpeed(int new_speed);
-
-  float getGoalPosition();//return value in "Centimeters"
-  void setGoalPosition(float new_goal_position);
-
-  int getAvgSpeed();
+  int	  getID();
+  void 	setID(int new_ID);
+  int 	getGoalSpeed();
+  void 	setGoalSpeed(int new_speed);
+  int 	getAvgSpeed();
+  int 	getPWM();
+  long 	getEncoder();
+  void 	setEncoder(long pos);
 };
-
 #endif
