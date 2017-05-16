@@ -14,6 +14,12 @@
 #define WHEEL_FULLBACK      3292
 #define ENCODER_FULLBACK    44
 
+#define FORWARD 2
+#define REVERSE 1
+#define STOP    0
+
+#define BREAK_RATE  1
+
 #define LEFT_MOTOR  9
 #define RIGHT_MOTOR 10
 #define MAX_SPEED   10
@@ -30,19 +36,25 @@ public:
   int pwm_pin;
   int stby_pin;
 
-  int 	id;         //"RIGHT_MOTOR" or "LEFT_MOTOR"
-  int 	goal_speed; //-10 to 10
-  int 	avg_speed;  //0 to 10
-  int 	pwm_value;  //0 to 255
+  float control_goal_speed;
+  float goal_speed; //-10.0 to 10.0
+  int id;         //"RIGHT_MOTOR" or "LEFT_MOTOR"
+  int avg_speed;  //0 to 10
+  int pwm_value;  //0 to 255
+  int direction;  //STOP,REVERSE,FORWARD
 
-  unsigned long present_encoder_pos;
-  unsigned long last_encoder_pos;
+  long present_encoder_pos;
+  long last_encoder_pos;
   long error;
   long error_acc;
+
+  //long goal_encoder_pos;
 
 public:
   DCMotor(int id,int pin2, int pin1, int pinPWM, int pinSTBY,Encoder& enc);
   void 	encoderUpdate();
+  //void positionUpdate();
+  void  gearBox();
   void 	speedUpdate();
   void 	move();
   void 	stbyEnable();
@@ -56,5 +68,7 @@ public:
   int 	getPWM();
   long 	getEncoder();
   void 	setEncoder(long pos);
+  //void  setGoalPosition(unsigned short int goal_position);
+  //int   getGoalPosition();
 };
 #endif

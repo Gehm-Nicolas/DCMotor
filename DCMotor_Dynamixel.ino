@@ -72,8 +72,8 @@ void loop()
     lastMilli = millis();
     motor_R.encoderUpdate();
     motor_L.encoderUpdate();
-    motor_R.speedUpdate();
-    motor_L.speedUpdate();
+    motor_R.gearBox();
+    motor_L.gearBox();
   }
   motor_R.move();
   motor_L.move();
